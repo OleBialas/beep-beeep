@@ -15,7 +15,7 @@ import slab
 root = Path(__file__).parent.parent.absolute()
 win = visual.Window([1920, 1080], fullscr=True, units="pix")
 fixation = visual.Circle(win, size=10, lineColor="white", fillColor="lightGrey")
-# port = serial.Serial(port="COM3", baudrate=115200)
+port = serial.Serial(port="COM3", baudrate=115200)
 event.globalKeys.clear()
 
 # define global keys and the functions they execute
@@ -67,7 +67,7 @@ def run_experiment(subject):
     info = json.load(open(sub_folder / "one_interval_detection_parameters.json"))
     # determine which frequency is standard and which is deviant
     std, dev = np.random.choice(info["freqs"], 2, replace=False)
-    info["standardFreq"], info["deviantFreq"] = std, dev
+    info["standardFreq"], info["deviantFreq"] = int(std), int(dev)
     prompt = visual.TextStim(
         win, text=info["prompt"]["welcome"], height=info["prompt"]["height"]
     )
@@ -77,7 +77,7 @@ def run_experiment(subject):
     # STEP1: calibrate the output
     level = level_calibration(info)
     info["hearingThresh"] = int(level)
-    json.dump(info, open(sub_folder / "interval_detection_parameters.json", "w"))
+    json.dump(info, open(sub_folder / "one_interval_detection_parameters.json", "w"))
 
     # STEP2: estimate threshold for detecting tones in noise
     prompt = visual.TextStim(
@@ -91,7 +91,7 @@ def run_experiment(subject):
         sub_folder / "beh" / f"{subject}_threshold_estimation.json", clobber=True
     )
     info["detectionThresh"] = statistics.mode(seq.intensities)
-    json.dump(info, open(sub_folder / "interval_detection_parameters.json", "w"))
+    json.dump(info, open(sub_folder / "one_interval_detection_parameters.json", "w"))
 
     # STEP3: run the experimental blocks
     prompt = visual.TextStim(
@@ -194,16 +194,16 @@ def run_block(info):
 
     # run the block
     for tone, freq in zip(tone_seq, freq_seq):
-        seq.add_response(tone)
+        freq_seq.add_response(tone)
         print(f"Trial {tone_seq.this_n} of {tone_seq.n_trials}")
         if tone:
-            level = noise.level + info["detectionThresh"]
+            level = noise.channel(0).level + info["detectionThresh"]
         else:
-            tone = None
+            level = None
         response = _run_trial(info, target_frequency=freq, target_level=level)
-        seq.add_response(response)
+        freq_seq.add_response(response)
     present.stop()
-    return seq
+    return freq_seq
 
 
 def level_calibration(info):
@@ -267,13 +267,13 @@ def detection_threshold(info):
     for target_level in seq:
         print(f"Trial number {seq.this_trial_n+1}, intensity:{seq.intensities[-1]}dB")
         play_sound = np.random.binomial(1, 0.5)  # whether or not to play a sound
-        if play_sound is False:
+        if play_sound == 0:
             level = None
         else:
-            noise.channel(0).level + target_level
+            level = noise.channel(0).level + target_level
         response = _run_trial(
             info,
-            target_frequency=info["threshFreq"],
+            target_frequency=info["staircase"]['freq'],
             target_level=level,
         )
         seq.add_response(play_sound == response)
@@ -289,13 +289,13 @@ def detection_threshold(info):
         target_level = seq.__next__()
         print(f"Trial number {seq.this_trial_n+1}, intensity:{seq.intensities[-1]}dB")
         play_sound = np.random.binomial(1, 0.5)  # whether or not to play a sound
-        if play_sound is False:
+        if play_sound == 0:
             level = None
         else:
-            noise.channel(0).level + target_level
+            level = noise.channel(0).level + target_level
         response = _run_trial(
             info,
-            target_frequency=info["standardFreq"],
+            target_frequency=info["staircase"]["freq"],
             target_level=level,
         )
         seq.add_response(play_sound == response)
@@ -355,3 +355,11 @@ def _run_trial(info, target_frequency, target_level):
     port.write(str.encode("0"))  # EEG trigger for response
     win.flip()
     return info["keys"][response]
+	
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("subjectID")
+    args = parser.parse_args()
+    subject = f"sub-{str(args.subjectID).zfill(3)}"
+    run_experiment(subject)
+
