@@ -16,8 +16,8 @@
     "keys":{"1": 1, "2":0},
 	"noiseLevel": 30,
 	"staircase": {
-		"start": -14,
-		"stop": -20,
+		"start": -10,
+		"stop": -19.5,
 		"step1": 1.5,
 		"step2": 0.75,
 		"freq": 1100,
@@ -28,6 +28,7 @@
 	"freqs": [1000, 1200],
 	"standardProb": 0.75,
 	"deviantProb": 0.25,
+    "notoneProb": 0.25,
 	"prompt": {
 		"height": 30,
 		"welcome": "Welcome and thank you for participating in our study! \n Before we start, you'll have to adjust the loudness of the sounds that are being presented. \n When you are ready, press enter \u23ce to start and follow the instructions on the screen",

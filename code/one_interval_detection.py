@@ -159,18 +159,22 @@ def run_experiment(subject):
 
 def run_block(info):
     n_trials = int(info["nTrials"] / info["nBlocks"])
-    frequencies = np.append(  # 1 = common, 2 = rare frequency
-        np.repeat(1, 2 * int(info["standardProb"] / info["deviantProb"])), [2, 2]
+    frequencies = np.repeat(
+        np.append(  # 1 = common, 2 = rare frequency
+            np.repeat(1, int(info["standardProb"] / info["deviantProb"])), 2
+        ),
+        int(1 / info["nogoProb"]),
     )
+
     tones = np.concatenate(
         [
-            np.repeat(1, int(info["standardProb"] / info["deviantProb"])),
-            np.repeat(2, int(info["standardProb"] / info["deviantProb"])),
-            np.array([1, 2]),
+            np.append(np.repeat(1, int(1 / info["notoneProb"]) - 1), 2)
+            for _ in range(int(1 / info["notoneProb"]))
         ]
     )
-    frequencies = np.repeat(frequencies, np.ceil(n_trials / len(frequencies)))
-    tones = np.repeat(tones, np.ceil(n_trials / len(tones)))
+    n_reps = int(np.ceil(n_trials / len(frequencies)))
+    tones = np.concatenate([tones for _ in range(n_reps)])
+    frequencies = np.concatenate([frequencies for _ in range(n_reps)])
     idx = np.random.choice(range(len(tones)), len(tones), replace=False)
     tones, frequencies = tones[idx], frequencies[idx]
     tone_seq = slab.Trialsequence(1, n_trials)
@@ -273,7 +277,7 @@ def detection_threshold(info):
             level = noise.channel(0).level + target_level
         response = _run_trial(
             info,
-            target_frequency=info["staircase"]['freq'],
+            target_frequency=info["staircase"]["freq"],
             target_level=level,
         )
         seq.add_response(play_sound == response)
@@ -355,11 +359,11 @@ def _run_trial(info, target_frequency, target_level):
     port.write(str.encode("0"))  # EEG trigger for response
     win.flip()
     return info["keys"][response]
-	
+
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("subjectID")
     args = parser.parse_args()
     subject = f"sub-{str(args.subjectID).zfill(3)}"
     run_experiment(subject)
-
