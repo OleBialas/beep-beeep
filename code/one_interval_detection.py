@@ -65,6 +65,9 @@ def run_experiment(subject):
             sub_folder / "one_interval_detection_parameters.json",
         )
     info = json.load(open(sub_folder / "one_interval_detection_parameters.json"))
+    # determine which frequency is standard and which is deviant
+    std, dev = np.random.choice(info["freqs"], 2, replace=False)
+    info["standardFreq"], info["deviantFreq"] = std, dev
     prompt = visual.TextStim(
         win, text=info["prompt"]["welcome"], height=info["prompt"]["height"]
     )
@@ -156,38 +159,49 @@ def run_experiment(subject):
 
 def run_block(info):
     n_trials = int(info["nTrials"] / info["nBlocks"])
-    trials = np.append(np.repeat(1, int(info["standardProb"] / info["deviantProb"])), 2)
-    trials = np.repeat(trials, np.ceil(n_trials / len(trials)))
-    np.random.shuffle(trials)
-    seq = slab.Trialsequence(1, n_trials)
-    seq.trials = trials[:n_trials].tolist()
-    seq.conditions = [info["standardFreq"], info["deviantFreq"]]
-    seq.n_conditions = 2
-    seq.label = f"0: {info['deviantFreq']} Hz; 1:{info['standardFreq']} Hz"
-    del trials
+    frequencies = np.append(  # 1 = common, 2 = rare frequency
+        np.repeat(1, 2 * int(info["standardProb"] / info["deviantProb"])), [2, 2]
+    )
+    tones = np.concatenate(
+        [
+            np.repeat(1, int(info["standardProb"] / info["deviantProb"])),
+            np.repeat(2, int(info["standardProb"] / info["deviantProb"])),
+            np.array([1, 2]),
+        ]
+    )
+    frequencies = np.repeat(frequencies, np.ceil(n_trials / len(frequencies)))
+    tones = np.repeat(tones, np.ceil(n_trials / len(tones)))
+    idx = np.random.choice(range(len(tones)), len(tones), replace=False)
+    tones, frequencies = tones[idx], frequencies[idx]
+    tone_seq = slab.Trialsequence(1, n_trials)
+    tone_seq.trials = tones[:n_trials].tolist()
+    tone_seq.conditions, tone_seq.n_conditions = [0, 1], 2
+    freq_seq = slab.Trialsequence(1, n_trials)
+    freq_seq.trials, freq_seq.n_conditions = frequencies[:n_trials].tolist(), 2
+    freq_seq.conditions = [info["standardFreq"], info["deviantFreq"]]
+    assert freq_seq.n_trials == tone_seq.n_trials
+    del tones, frequencies
     noise = slab.Sound.whitenoise(  # generate background noise
         samplerate=info["sampleRate"],
         duration=info["noiseDur"],
         level=info["hearingThresh"] + info["noiseLevel"],
         n_channels=2,
     )
-    noise.data[:, 1] = 0
+    noise.data[:, 1] = 0  # set trigger channel to 0
     present = Sound(stereo=True)  # convert to psychopy
     present._setSndFromArray(noise.data)
     present.play(loops=1000)  # start playing background noise
 
     # run the block
-    for target_frequency in seq:
-        print(f"Trial {seq.this_n} of {seq.n_trials}")
-        target_interval = np.random.randint(1, 3)
-        response = _run_trial(
-            info,
-            n_intervals=2,
-            target_interval=target_interval,
-            target_frequency=target_frequency,
-            target_level=noise.level + info["detectionThresh"],
-        )
-        seq.add_response((target_interval, response))
+    for tone, freq in zip(tone_seq, freq_seq):
+        seq.add_response(tone)
+        print(f"Trial {tone_seq.this_n} of {tone_seq.n_trials}")
+        if tone:
+            level = noise.level + info["detectionThresh"]
+        else:
+            tone = None
+        response = _run_trial(info, target_frequency=freq, target_level=level)
+        seq.add_response(response)
     present.stop()
     return seq
 
@@ -259,7 +273,7 @@ def detection_threshold(info):
             noise.channel(0).level + target_level
         response = _run_trial(
             info,
-            target_frequency=info["standardFreq"],
+            target_frequency=info["threshFreq"],
             target_level=level,
         )
         seq.add_response(play_sound == response)

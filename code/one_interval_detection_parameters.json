@@ -23,9 +23,10 @@
 		"freq": 1000,
 		"nTrials": 40
 	},
-	"nTrials": 1000,
+	"nTrials": 1120,
 	"nBlocks": 20,
 	"freqs": [1000, 1200],
+    "threshFreq": 1100,
 	"standardProb": 0.75,
 	"deviantProb": 0.25,
 	"prompt": {
