@@ -112,7 +112,7 @@ def run_experiment(subject):
         )
         prompt = visual.TextStim(
             win,
-            text=f"Good job, you completed trial {iblock+1} of {info['nBlocks']}! \n \n Feel free to take a break. If you want to exit the booth, ring the bell to let the experimenter know. \n \n Once you are ready, press enter \u23ce to continue.",
+            text=f"Good job, you completed block {iblock+1} of {info['nBlocks']}! \n \n Feel free to take a break. If you want to exit the booth, ring the bell to let the experimenter know. \n \n Once you are ready, press enter \u23ce to continue.",
             height=info["prompt"]["height"],
         )
         prompt.draw()
@@ -163,7 +163,7 @@ def run_block(info):
         np.append(  # 1 = common, 2 = rare frequency
             np.repeat(1, int(info["standardProb"] / info["deviantProb"])), 2
         ),
-        int(1 / info["nogoProb"]),
+        int(1 / info["notoneProb"]),
     )
 
     tones = np.concatenate(
@@ -270,7 +270,7 @@ def detection_threshold(info):
 
     for target_level in seq:
         print(f"Trial number {seq.this_trial_n+1}, intensity:{seq.intensities[-1]}dB")
-        play_sound = np.random.binomial(1, 0.5)  # whether or not to play a sound
+        play_sound = np.random.binomial(1, 1-info['notoneProb'])  # whether or not to play a sound
         if play_sound == 0:
             level = None
         else:

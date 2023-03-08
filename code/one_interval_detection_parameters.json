@@ -21,10 +21,10 @@
 		"step1": 1.5,
 		"step2": 0.75,
 		"freq": 1100,
-		"nTrials": 50
+		"nTrials": 40
 	},
-	"nTrials": 224,
-	"nBlocks": 4,
+	"nTrials": 192,
+	"nBlocks": 3,
 	"freqs": [1000, 1200],
 	"standardProb": 0.75,
 	"deviantProb": 0.25,
