@@ -87,14 +87,14 @@ def run_experiment(subject):
     win.flip()
     event.waitKeys(keyList=["return"])
     modes = []
-    for iblock in range(info['staircase']['nBlocks']:
+    for iblock in range(info['staircase']['nBlocks']):
         seq = detection_threshold(info)
         seq.save_json(
             sub_folder / "beh" / f"{subject}_staircase_block{iblock+1}.json", clobber=True
         )
         modes.append(statistics.mode(seq.intensities))
         _after_block_prompt(iblock+1, info['staircase']['nBlocks'])
-    info["detectionThresh"] = mean(modes)
+    info["detectionThresh"] = np.mean(modes)
     json.dump(info, open(sub_folder / "one_interval_detection_parameters.json", "w"))
 
     # STEP3: run the experimental blocks
@@ -291,7 +291,7 @@ def detection_threshold(info):
     while seq.this_trial_n < info["staircase"]["nTrials"]:
         target_level = seq.__next__()
         print(f"Trial number {seq.this_trial_n+1}, intensity:{seq.intensities[-1]}dB")
-        play_sound = np.random.binomial(1, 0.5)  # whether or not to play a sound
+        play_sound = np.random.binomial(1, 1-info['notoneProb'])  # whether or not to play a sound
         if play_sound == 0:
             level = None
         else:
