@@ -21,7 +21,8 @@
 		"step1": 1.5,
 		"step2": 0.75,
 		"freq": 1100,
-		"nTrials": 40
+		"nTrials": 40,
+        "nBlocks": 3
 	},
 	"nTrials": 192,
 	"nBlocks": 3,

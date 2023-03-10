@@ -86,11 +86,15 @@ def run_experiment(subject):
     prompt.draw()
     win.flip()
     event.waitKeys(keyList=["return"])
-    seq = detection_threshold(info)
-    seq.save_json(
-        sub_folder / "beh" / f"{subject}_threshold_estimation.json", clobber=True
-    )
-    info["detectionThresh"] = statistics.mode(seq.intensities)
+    modes = []
+    for iblock in range(info['staircase']['nBlocks']:
+        seq = detection_threshold(info)
+        seq.save_json(
+            sub_folder / "beh" / f"{subject}_staircase_block{iblock+1}.json", clobber=True
+        )
+        modes.append(statistics.mode(seq.intensities))
+        _after_block_prompt(iblock+1, info['staircase']['nBlocks'])
+    info["detectionThresh"] = mean(modes)
     json.dump(info, open(sub_folder / "one_interval_detection_parameters.json", "w"))
 
     # STEP3: run the experimental blocks
@@ -110,14 +114,7 @@ def run_experiment(subject):
             sub_folder / "beh" / f"{subject}_block{str(iblock+1).zfill(2)}.json",
             clobber=True,
         )
-        prompt = visual.TextStim(
-            win,
-            text=f"Good job, you completed block {iblock+1} of {info['nBlocks']}! \n \n Feel free to take a break. If you want to exit the booth, ring the bell to let the experimenter know. \n \n Once you are ready, press enter \u23ce to continue.",
-            height=info["prompt"]["height"],
-        )
-        prompt.draw()
-        win.flip()
-        event.waitKeys(keyList=["return"])
+        _after_block_prompt(iblock+1, info['nBlocks'])
 
     # now do one last block whith only beeps and no noise
     prompt = visual.TextStim(
@@ -179,7 +176,7 @@ def run_block(info):
     tones, frequencies = tones[idx], frequencies[idx]
     tone_seq = slab.Trialsequence(1, n_trials)
     tone_seq.trials = tones[:n_trials].tolist()
-    tone_seq.conditions, tone_seq.n_conditions = [0, 1], 2
+    tone_seq.conditions, tone_seq.n_conditions = [1, 0], 2
     freq_seq = slab.Trialsequence(1, n_trials)
     freq_seq.trials, freq_seq.n_conditions = frequencies[:n_trials].tolist(), 2
     freq_seq.conditions = [info["standardFreq"], info["deviantFreq"]]
@@ -270,7 +267,9 @@ def detection_threshold(info):
 
     for target_level in seq:
         print(f"Trial number {seq.this_trial_n+1}, intensity:{seq.intensities[-1]}dB")
-        play_sound = np.random.binomial(1, 1-info['notoneProb'])  # whether or not to play a sound
+        play_sound = np.random.binomial(
+            1, 1 - info["notoneProb"]
+        )  # whether or not to play a sound
         if play_sound == 0:
             level = None
         else:
@@ -359,6 +358,17 @@ def _run_trial(info, target_frequency, target_level):
     port.write(str.encode("0"))  # EEG trigger for response
     win.flip()
     return info["keys"][response]
+
+
+def _after_block_prompt(i_block, n_blocks):
+        prompt = visual.TextStim(
+            win,
+            text=f"Good job, you completed block {i_block} of {n_blocks}! \n \n Feel free to take a break. If you want to exit the booth, ring the bell to let the experimenter know. \n \n Once you are ready, press enter \u23ce to continue.",
+            height=info["prompt"]["height"],
+        )
+        prompt.draw()
+        win.flip()
+        event.waitKeys(keyList=["return"])
 
 
 if __name__ == "__main__":
